@@ -272,7 +272,7 @@ Session-0 isolation requires this two-process design.
 
 ---
 
-## Contributing
+# Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md)
 
