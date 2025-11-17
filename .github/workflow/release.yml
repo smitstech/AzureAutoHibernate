@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+
+      - name: Run tests
+        run: go test ./... -v
+
+      - name: Build service and notifier
+        run: |
+          go build -o AzureAutoHibernate.exe ./cmd/autohibernate
+          go build -ldflags="-H=windowsgui" -o AzureAutoHibernate.Notifier.exe ./cmd/notifier
+
+      - name: Package binaries
+        run: |
+          New-Item -ItemType Directory -Force -Path dist
+          Copy-Item AzureAutoHibernate.exe dist/
+          Copy-Item AzureAutoHibernate.Notifier.exe dist/
+          Copy-Item config.json dist/
+          Compress-Archive -Path dist\* -DestinationPath AzureAutoHibernate-${{ github.ref_name }}-windows-amd64.zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: AzureAutoHibernate-${{ github.ref_name }}-windows-amd64.zip
