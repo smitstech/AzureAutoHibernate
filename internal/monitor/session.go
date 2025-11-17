@@ -96,6 +96,16 @@ func GetSessionIdleTime(sessionId uint32) (time.Duration, error) {
 	}
 	defer procWTSFreeMemory.Call(uintptr(unsafe.Pointer(buffer)))
 
+	// Validate that we got meaningful data
+	// CurrentTime should be non-zero (it's a timestamp since 1601)
+	// LastInputTime should be <= CurrentTime
+	if buffer.CurrentTime == 0 {
+		return 0, fmt.Errorf("session %d returned invalid CurrentTime (0)", sessionId)
+	}
+	if buffer.LastInputTime > buffer.CurrentTime {
+		return 0, fmt.Errorf("session %d has LastInputTime > CurrentTime", sessionId)
+	}
+
 	// CurrentTime and LastInputTime are in FILETIME format (100-nanosecond intervals since 1601)
 	// Calculate idle time
 	idleTime := time.Duration(buffer.CurrentTime-buffer.LastInputTime) * 100 * time.Nanosecond

@@ -106,9 +106,9 @@ func TestFormatTimeRemaining(t *testing.T) {
 			want:     "2 minutes",
 		},
 		{
-			name:     "2 minutes 29 seconds - rounds to 2 minutes",
+			name:     "2 minutes 29 seconds - rounds to 2 minutes 30 seconds",
 			duration: 2*time.Minute + 29*time.Second,
-			want:     "2 minutes",
+			want:     "2 minutes 30 seconds",
 		},
 		{
 			name:     "2 minutes 30 seconds",

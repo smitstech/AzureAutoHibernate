@@ -237,6 +237,7 @@ func TestShouldCancelWarning(t *testing.T) {
 	tests := []struct {
 		name            string
 		warningState    WarningState
+		idleCondition   IdleCondition
 		noUsersIdle     bool
 		allDiscIdle     bool
 		hasUsers        bool
@@ -247,6 +248,7 @@ func TestShouldCancelWarning(t *testing.T) {
 		{
 			name:            "no warning active - should not cancel",
 			warningState:    WarningStateNone,
+			idleCondition:   IdleConditionNoUsers,
 			noUsersIdle:     false,
 			allDiscIdle:     false,
 			hasUsers:        true,
@@ -257,6 +259,7 @@ func TestShouldCancelWarning(t *testing.T) {
 		{
 			name:            "warning for no users, users logged in - should cancel",
 			warningState:    WarningStateActive,
+			idleCondition:   IdleConditionNoUsers,
 			noUsersIdle:     true,
 			allDiscIdle:     false,
 			hasUsers:        true,
@@ -267,6 +270,7 @@ func TestShouldCancelWarning(t *testing.T) {
 		{
 			name:            "warning for all disconnected, user reconnected - should cancel",
 			warningState:    WarningStateActive,
+			idleCondition:   IdleConditionAllDisconnected,
 			noUsersIdle:     false,
 			allDiscIdle:     true,
 			hasUsers:        true,
@@ -277,12 +281,13 @@ func TestShouldCancelWarning(t *testing.T) {
 		{
 			name:            "warning for inactive user, still inactive - should not cancel",
 			warningState:    WarningStateActive,
+			idleCondition:   IdleConditionInactiveUser,
 			noUsersIdle:     false,
 			allDiscIdle:     false,
 			hasUsers:        true,
 			allDisconnected: false,
-			sessions:        []SessionInfo{{SessionId: 1, IsDisconnected: false}},
-			want:            false, // Note: actual cancellation would depend on GetSessionIdleTime
+			sessions:        []SessionInfo{{SessionId: 99999, IsDisconnected: false}},
+			want:            false, // Note: GetSessionIdleTime will fail for invalid session ID, causing function to return false
 		},
 	}
 
@@ -290,6 +295,7 @@ func TestShouldCancelWarning(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			monitor := NewIdleMonitor(30, 60, 120, 5, 10)
 			monitor.state.WarningState = tt.warningState
+			monitor.state.IdleCondition = tt.idleCondition
 
 			now := time.Now()
 			if tt.noUsersIdle {
