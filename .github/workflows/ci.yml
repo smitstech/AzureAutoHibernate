@@ -21,6 +21,9 @@ jobs:
       - name: Run tests
         run: go test ./... -v
 
+      - name: Run go vet
+        run: go vet ./...
+
       - name: Build service and notifier
         run: |
           go build -o AzureAutoHibernate.exe ./cmd/autohibernate
