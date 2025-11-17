@@ -169,14 +169,14 @@ func TestFormatTimeRemainingRoundingEdgeCases(t *testing.T) {
 		seconds int
 		want    string
 	}{
-		{14, "less than 30 seconds"},  // 14 + 15 = 29, rounds to 0
-		{15, "30 seconds"},             // 15 + 15 = 30, rounds to 30
-		{44, "30 seconds"},             // 44 + 15 = 59, rounds to 30
-		{45, "1 minute"},               // 45 + 15 = 60, rounds to 60
-		{74, "1 minute"},               // 74 + 15 = 89, rounds to 60
-		{75, "1 minute 30 seconds"},    // 75 + 15 = 90, rounds to 90
-		{104, "1 minute 30 seconds"},   // 104 + 15 = 119, rounds to 90
-		{105, "2 minutes"},             // 105 + 15 = 120, rounds to 120
+		{14, "less than 30 seconds"}, // 14 + 15 = 29, rounds to 0
+		{15, "30 seconds"},           // 15 + 15 = 30, rounds to 30
+		{44, "30 seconds"},           // 44 + 15 = 59, rounds to 30
+		{45, "1 minute"},             // 45 + 15 = 60, rounds to 60
+		{74, "1 minute"},             // 74 + 15 = 89, rounds to 60
+		{75, "1 minute 30 seconds"},  // 75 + 15 = 90, rounds to 90
+		{104, "1 minute 30 seconds"}, // 104 + 15 = 119, rounds to 90
+		{105, "2 minutes"},           // 105 + 15 = 120, rounds to 120
 	}
 
 	for _, tt := range tests {

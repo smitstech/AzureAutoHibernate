@@ -1,8 +1,36 @@
 # AzureAutoHibernate
 
-A lightweight Windows service for Azure VMs that automatically detects user inactivity and safely hibernates the VM, helping reduce compute costs while preserving user experience.
+[![CI](https://github.com/smitstech/AzureAutoHibernate/actions/workflows/ci.yml/badge.svg)](https://github.com/smitstech/AzureAutoHibernate/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/smitstech/AzureAutoHibernate/actions/workflows/codeql.yml/badge.svg)](https://github.com/smitstech/AzureAutoHibernate/actions/workflows/codeql.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-AzureAutoHibernate monitors user sessions, keyboard/mouse input, and RDP states, sends toast warnings, and hibernates the VM via Azure's Hibernate API using Managed Identity.
+Automatically hibernate Azure VMs when idle, using IMDS + Managed Identity.  
+Runs as a lightweight Windows service with optional toast notifications.
+
+---
+
+## Downloads
+
+Grab the latest binaries here:  
+https://github.com/smitstech/AzureAutoHibernate/releases
+
+---
+
+## Features
+
+- Idle detection with configurable thresholds
+- Pre-hibernate toast notification
+- Hibernate via Azure IMDS using Managed Identity
+- Windows service + notifier app
+- No Azure credentials stored locally
+- Extremely lightweight and safe
+
+---
+
+## Why?
+
+Dev/test VMs cost money when left running.  
+AzureAutoHibernate shuts them down automatically when they're idle — similar to a laptop closing the lid.
 
 ---
 
@@ -244,12 +272,12 @@ Session-0 isolation requires this two-process design.
 
 ---
 
-# License
+# Contributing
 
-MIT
+See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ---
 
-# Contributing
+# License
 
-Issues and PRs welcome!
+MIT
