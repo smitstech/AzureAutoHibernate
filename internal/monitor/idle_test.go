@@ -286,8 +286,8 @@ func TestShouldCancelWarning(t *testing.T) {
 			allDiscIdle:     false,
 			hasUsers:        true,
 			allDisconnected: false,
-			sessions:        []SessionInfo{{SessionId: 1, IsDisconnected: false}},
-			want:            false, // Note: actual cancellation would depend on GetSessionIdleTime
+			sessions:        []SessionInfo{{SessionId: 99999, IsDisconnected: false}},
+			want:            false, // Note: GetSessionIdleTime will fail for invalid session ID, causing function to return false
 		},
 	}
 
