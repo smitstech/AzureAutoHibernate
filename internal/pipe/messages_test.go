@@ -229,7 +229,7 @@ func TestFormatWarningMessage(t *testing.T) {
 			name:          "warning with mixed time",
 			reason:        "Disconnected session",
 			timeRemaining: 2*time.Minute + 30*time.Second,
-			wantContains:  []string{"2 minute 30 seconds", "Disconnected session", "cancel"},
+			wantContains:  []string{"2 minutes 30 seconds", "Disconnected session", "cancel"},
 		},
 	}
 
