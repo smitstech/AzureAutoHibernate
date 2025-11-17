@@ -1,0 +1,8 @@
+{
+  "noUsersIdleMinutes": 15,
+  "allDisconnectedIdleMinutes": 15,
+  "inactiveUserIdleMinutes": 30,
+  "inactiveUserWarningMinutes": 5,
+  "minimumUptimeMinutes": 5,
+  "logLevel": "info"
+}
