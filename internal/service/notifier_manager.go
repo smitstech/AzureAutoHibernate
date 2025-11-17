@@ -59,12 +59,12 @@ type NotifierProcess struct {
 
 // NotifierManager manages notifier processes for user sessions
 type NotifierManager struct {
-	notifiers              map[int]*NotifierProcess
-	mu                     sync.RWMutex
-	logger                 logger.Logger
-	notifierExePath        string
-	stopChan               chan struct{}
-	wg                     sync.WaitGroup
+	notifiers               map[int]*NotifierProcess
+	mu                      sync.RWMutex
+	logger                  logger.Logger
+	notifierExePath         string
+	stopChan                chan struct{}
+	wg                      sync.WaitGroup
 	startupNotificationSent bool
 }
 
