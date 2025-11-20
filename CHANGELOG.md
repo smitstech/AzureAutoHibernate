@@ -13,8 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - **Version information system** with build-time injection from git tags
   - New `internal/version` package with `Version`, `GitCommit`, and `BuildDate` variables
-  - `-version` flag for `AzureAutoHibernate.exe`
-  - Version output includes semantic version, git commit hash, build timestamp, and Go version
+  - `-version` flag for `AzureAutoHibernate.exe` outputs clean version string (e.g., `v1.0.0`)
 - **Build automation scripts**
   - `build.ps1` - PowerShell build script with automatic version detection from git tags
   - `Makefile` - Cross-platform build script for Linux/Mac development

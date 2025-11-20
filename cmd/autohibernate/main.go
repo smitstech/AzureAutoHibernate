@@ -52,7 +52,7 @@ func main() {
 	// Dispatch to appropriate mode
 	switch {
 	case opts.showVersion:
-		fmt.Println(version.Info())
+		fmt.Println(version.Short())
 		os.Exit(0)
 	case opts.install:
 		runInstall()

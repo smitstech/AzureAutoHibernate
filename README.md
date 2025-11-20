@@ -168,10 +168,7 @@ AzureAutoHibernate.exe -version
 
 Output:
 ```
-Version: v1.0.0
-Commit:  a1b2c3d4...
-Built:   2025-01-15T10:30:00Z
-Go:      go1.22.0
+v1.0.0
 ```
 
 ### Manual Build
