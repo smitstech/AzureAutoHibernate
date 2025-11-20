@@ -25,8 +25,12 @@ jobs:
 
       - name: Build service and notifier
         run: |
-          go build -o AzureAutoHibernate.exe ./cmd/autohibernate
-          go build -ldflags="-H=windowsgui" -o AzureAutoHibernate.Notifier.exe ./cmd/notifier
+          $VERSION = "${{ github.ref_name }}"
+          $COMMIT = "${{ github.sha }}"
+          $BUILD_DATE = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+          $LDFLAGS = "-X github.com/smitstech/AzureAutoHibernate/internal/version.Version=$VERSION -X github.com/smitstech/AzureAutoHibernate/internal/version.GitCommit=$COMMIT -X github.com/smitstech/AzureAutoHibernate/internal/version.BuildDate=$BUILD_DATE"
+          go build -ldflags="$LDFLAGS" -o AzureAutoHibernate.exe ./cmd/autohibernate
+          go build -ldflags="-H=windowsgui $LDFLAGS" -o AzureAutoHibernate.Notifier.exe ./cmd/notifier
 
       - name: Package binaries
         run: |

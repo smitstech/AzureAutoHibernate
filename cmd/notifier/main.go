@@ -11,13 +11,21 @@ import (
 
 	"github.com/smitstech/AzureAutoHibernate/internal/appinfo"
 	"github.com/smitstech/AzureAutoHibernate/internal/notifier"
+	"github.com/smitstech/AzureAutoHibernate/internal/version"
 	"golang.org/x/sys/windows"
 )
 
 func main() {
 	// Parse command-line flags
 	sessionID := flag.Int("session", 0, "Session ID (0 for auto-detect)")
+	showVersion := flag.Bool("version", false, "Show version information")
 	flag.Parse()
+
+	// Handle version flag
+	if *showVersion {
+		fmt.Println(version.Info())
+		os.Exit(0)
+	}
 
 	// Create logger
 	logger, err := notifier.NewFileLogger()

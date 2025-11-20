@@ -146,15 +146,45 @@ Example `config.json`:
 
 # Building
 
-To build on Windows:
+### Using Build Scripts (Recommended)
 
+**On Windows (PowerShell):**
+```powershell
+.\build.ps1
+```
+
+**On Linux/Mac (with Make):**
+```bash
+make build
+```
+
+Both methods automatically inject version information from git tags.
+
+### Check Version
+
+```cmd
+AzureAutoHibernate.exe -version
+```
+
+Output:
+```
+Version: v1.0.0
+Commit:  a1b2c3d4...
+Built:   2025-01-15T10:30:00Z
+Go:      go1.22.0
+```
+
+### Manual Build
+
+To build manually without version injection:
+
+**On Windows:**
 ```bash
 go build -o AzureAutoHibernate.exe ./cmd/autohibernate
 go build -ldflags="-H=windowsgui" -o AzureAutoHibernate.Notifier.exe ./cmd/notifier
 ```
 
-To cross-compile from Linux/Mac:
-
+**To cross-compile from Linux/Mac:**
 ```bash
 GOOS=windows GOARCH=amd64 go build -o AzureAutoHibernate.exe ./cmd/autohibernate
 GOOS=windows GOARCH=amd64 go build -ldflags="-H=windowsgui" -o AzureAutoHibernate.Notifier.exe ./cmd/notifier
