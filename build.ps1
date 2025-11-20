@@ -61,9 +61,5 @@ Write-Host "  AzureAutoHibernate.Notifier.exe"
 
 # Test version flag
 Write-Host ""
-Write-Host "Testing service version:" -ForegroundColor Cyan
+Write-Host "Testing version:" -ForegroundColor Cyan
 & .\AzureAutoHibernate.exe -version
-
-Write-Host ""
-Write-Host "Testing notifier version:" -ForegroundColor Cyan
-& .\AzureAutoHibernate.Notifier.exe -version
