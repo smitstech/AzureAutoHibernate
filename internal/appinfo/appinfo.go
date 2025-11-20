@@ -5,9 +5,9 @@ package appinfo
 // Application identity constants
 const (
 	// Name is the display name of the application
-	Name = "AzureAutoHibernate"
+	Name = "Azure Auto Hibernate"
 
-	// ServiceName is the Windows service name
+	// ServiceName is the Windows service name (no spaces for command-line compatibility)
 	ServiceName = "AzureAutoHibernate"
 
 	// MainExeName is the name of the main service executable
