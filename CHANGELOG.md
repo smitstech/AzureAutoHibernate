@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+---
+
+## [1.0.3] – 2025-11-22
+
+### Added
+
+- **Release documentation** - new `RELEASING.md` with step-by-step instructions for creating releases
+
+---
+
+## [1.0.2] – 2025-11-22
+
 ### Added
 
 - **Version information system** with build-time injection from git tags
