@@ -31,6 +31,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.0.1] – 2025-11-22
+
+### Added
+
+- **Automatic service installation** - the `-install` flag now creates and starts the Windows service automatically
+  - New `internal/installer` package handles service registration via Windows Service Control Manager
+  - No longer requires manual `sc create` and `sc start` commands
+  - Simplified installation: just run `AzureAutoHibernate.exe -install` as Administrator
+
+### Changed
+
+- Refactored installation logic from `cmd/autohibernate/main.go` into dedicated `internal/installer` package
+
+---
+
 ## [1.0.0] – 2025-11-17
 
 ### Added
