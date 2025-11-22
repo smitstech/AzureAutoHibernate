@@ -22,6 +22,18 @@ go test ./...
 
 ### Building
 
+Use the build scripts for automatic version injection:
+
+```powershell
+# Windows
+.\build.ps1
+
+# Linux/Mac
+make build
+```
+
+Or build manually:
+
 ```bash
 go build -o AzureAutoHibernate.exe ./cmd/autohibernate
 go build -ldflags="-H=windowsgui" -o AzureAutoHibernate.Notifier.exe ./cmd/notifier
@@ -44,7 +56,44 @@ go build -ldflags="-H=windowsgui" -o AzureAutoHibernate.Notifier.exe ./cmd/notif
 
 ## Release process
 
-Releases use semver (`vX.Y.Z`) and update `CHANGELOG.md`.
+This project uses [Semantic Versioning](https://semver.org/) and follows the [Keep a Changelog](https://keepachangelog.com/) format.
+
+### How to release
+
+1. **Create a release preparation PR**
+   ```bash
+   git checkout -b release-vX.Y.Z
+   # Edit CHANGELOG.md:
+   #  - Move items from [Unreleased] to new [X.Y.Z] section
+   #  - Use format: ## [X.Y.Z] - YYYY-MM-DD
+   #  - Reset [Unreleased] to "- (nothing yet)"
+   git add CHANGELOG.md
+   git commit -m "Prepare release vX.Y.Z"
+   git push origin release-vX.Y.Z
+   ```
+
+2. **Merge the PR** (with review/approvals as needed)
+
+3. **Tag the release from main**
+   ```bash
+   git checkout main
+   git pull origin main
+   git tag vX.Y.Z
+   git push origin vX.Y.Z  # Push tag only
+   ```
+
+4. **Automated workflow**
+   - GitHub Actions automatically builds both executables with version info
+   - Extracts release notes from the corresponding version section in CHANGELOG.md
+   - Creates GitHub release with binaries and release notes
+
+**Alternative:** Create the release directly from GitHub UI (Releases → Draft a new release → Create new tag)
+
+### Version number guidelines
+
+- **Major (X)**: Breaking changes
+- **Minor (Y)**: New features, backward compatible
+- **Patch (Z)**: Bug fixes, backward compatible
 
 ## License
 

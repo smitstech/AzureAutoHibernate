@@ -5,7 +5,9 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/smitstech/AzureAutoHibernate/internal/appinfo"
@@ -14,15 +16,17 @@ import (
 	"github.com/smitstech/AzureAutoHibernate/internal/installer"
 	"github.com/smitstech/AzureAutoHibernate/internal/logger"
 	"github.com/smitstech/AzureAutoHibernate/internal/service"
+	"github.com/smitstech/AzureAutoHibernate/internal/version"
 	"golang.org/x/sys/windows/svc"
 )
 
 // options holds command-line flags
 type options struct {
-	configPath string
-	debugMode  bool
-	install    bool
-	uninstall  bool
+	configPath  string
+	debugMode   bool
+	install     bool
+	uninstall   bool
+	showVersion bool
 }
 
 // parseFlags parses command-line flags and returns options
@@ -32,6 +36,7 @@ func parseFlags() *options {
 	flag.BoolVar(&opts.debugMode, "debug", false, "Run in debug mode (console) instead of as a service")
 	flag.BoolVar(&opts.install, "install", false, "Install the service")
 	flag.BoolVar(&opts.uninstall, "uninstall", false, "Uninstall the service")
+	flag.BoolVar(&opts.showVersion, "version", false, "Show version information")
 	flag.Parse()
 	return opts
 }
@@ -44,6 +49,9 @@ func main() {
 
 	// Dispatch to appropriate mode
 	switch {
+	case opts.showVersion:
+		fmt.Println(version.Short())
+		os.Exit(0)
 	case opts.install:
 		runInstall()
 	case opts.uninstall:

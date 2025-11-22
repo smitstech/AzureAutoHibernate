@@ -25,8 +25,12 @@ jobs:
 
       - name: Build service and notifier
         run: |
-          go build -o AzureAutoHibernate.exe ./cmd/autohibernate
-          go build -ldflags="-H=windowsgui" -o AzureAutoHibernate.Notifier.exe ./cmd/notifier
+          $VERSION = "${{ github.ref_name }}"
+          $COMMIT = "${{ github.sha }}"
+          $BUILD_DATE = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+          $LDFLAGS = "-X github.com/smitstech/AzureAutoHibernate/internal/version.Version=$VERSION -X github.com/smitstech/AzureAutoHibernate/internal/version.GitCommit=$COMMIT -X github.com/smitstech/AzureAutoHibernate/internal/version.BuildDate=$BUILD_DATE"
+          go build -ldflags="$LDFLAGS" -o AzureAutoHibernate.exe ./cmd/autohibernate
+          go build -ldflags="-H=windowsgui $LDFLAGS" -o AzureAutoHibernate.Notifier.exe ./cmd/notifier
 
       - name: Package binaries
         run: |
@@ -36,7 +40,35 @@ jobs:
           Copy-Item config.json dist/
           Compress-Archive -Path dist\* -DestinationPath AzureAutoHibernate-${{ github.ref_name }}-windows-amd64.zip
 
+      - name: Extract release notes from CHANGELOG
+        run: |
+          $changelog = Get-Content CHANGELOG.md -Raw
+          $version = "${{ github.ref_name }}"
+          # Remove 'v' prefix if present for matching
+          $versionNumber = $version -replace '^v', ''
+
+          # Try to extract the specific version section
+          $pattern = "(?s)## \[$versionNumber\][^\n]*\s*(.*?)\s*(?=---\s*##|\z)"
+          if ($changelog -match $pattern) {
+            $releaseNotes = $matches[1].Trim()
+            if ($releaseNotes -ne "" -and $releaseNotes -ne "- (nothing yet)") {
+              # Add header
+              $releaseNotes = "## What's Changed`n`n" + $releaseNotes
+              $releaseNotes | Out-File -FilePath release-notes.md -Encoding utf8
+              Write-Host "Release notes extracted successfully for $version"
+              Write-Host "---"
+              Write-Host $releaseNotes
+              Write-Host "---"
+            } else {
+              "No changes documented for this release." | Out-File -FilePath release-notes.md -Encoding utf8
+            }
+          } else {
+            Write-Host "Warning: Could not find version $versionNumber in CHANGELOG.md"
+            "Release $version" | Out-File -FilePath release-notes.md -Encoding utf8
+          }
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: AzureAutoHibernate-${{ github.ref_name }}-windows-amd64.zip
+          body_path: release-notes.md
