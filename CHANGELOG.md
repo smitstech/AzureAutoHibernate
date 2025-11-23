@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Self-update capability** with automatic GitHub release checking
+  - New `internal/updater` package handles update detection and download
+  - New `AzureAutoHibernate.Updater.exe` helper applies updates after service stops
+  - Configurable update check interval via `updateCheckIntervalHr` (default: 24 hours)
+  - Optional auto-update via `autoUpdate` config option (default: disabled)
+  - Manual update check via `-check-update` command line flag
+  - Uses `creativeprojects/go-selfupdate` library for GitHub release detection
+  - GitHub repository configured in `internal/appinfo` (for forks to customize)
+
+### Changed
+
+- Updated build scripts (`build.ps1`, `Makefile`) to build updater executable
+- Updated CI and release workflows to include updater in packages
+- Updated `config.json` with new update-related settings
+
 ---
 
 ## [1.0.3] – 2025-11-22

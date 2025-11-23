@@ -16,6 +16,7 @@ import (
 	"github.com/smitstech/AzureAutoHibernate/internal/installer"
 	"github.com/smitstech/AzureAutoHibernate/internal/logger"
 	"github.com/smitstech/AzureAutoHibernate/internal/service"
+	"github.com/smitstech/AzureAutoHibernate/internal/updater"
 	"github.com/smitstech/AzureAutoHibernate/internal/version"
 	"golang.org/x/sys/windows/svc"
 )
@@ -27,6 +28,7 @@ type options struct {
 	install     bool
 	uninstall   bool
 	showVersion bool
+	checkUpdate bool
 }
 
 // parseFlags parses command-line flags and returns options
@@ -37,6 +39,7 @@ func parseFlags() *options {
 	flag.BoolVar(&opts.install, "install", false, "Install the service")
 	flag.BoolVar(&opts.uninstall, "uninstall", false, "Uninstall the service")
 	flag.BoolVar(&opts.showVersion, "version", false, "Show version information")
+	flag.BoolVar(&opts.checkUpdate, "check-update", false, "Check for available updates")
 	flag.Parse()
 	return opts
 }
@@ -52,12 +55,35 @@ func main() {
 	case opts.showVersion:
 		fmt.Println(version.Short())
 		os.Exit(0)
+	case opts.checkUpdate:
+		runCheckUpdate()
 	case opts.install:
 		runInstall()
 	case opts.uninstall:
 		runUninstall()
 	default:
 		runServiceOrDebug(opts)
+	}
+}
+
+// runCheckUpdate checks for available updates and displays the result
+func runCheckUpdate() {
+	log.Println("Checking for updates...")
+	log.Printf("Current version: %s", version.Version)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	info, err := updater.CheckForUpdate(ctx)
+	if err != nil {
+		log.Fatalf("Failed to check for updates: %v", err)
+	}
+
+	if info.UpdateAvailable {
+		log.Printf("Update available: %s -> %s", info.CurrentVersion, info.LatestVersion)
+		log.Printf("Release URL: %s", info.ReleaseURL)
+	} else {
+		log.Println("You are running the latest version.")
 	}
 }
 

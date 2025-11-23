@@ -54,10 +54,19 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
+# Build updater
+Write-Host "Building updater executable..." -ForegroundColor Yellow
+go build -ldflags="$ldflags" -o AzureAutoHibernate.Updater.exe ./cmd/updater
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Failed to build updater" -ForegroundColor Red
+    exit 1
+}
+
 Write-Host ""
 Write-Host "Build complete!" -ForegroundColor Green
 Write-Host "  AzureAutoHibernate.exe"
 Write-Host "  AzureAutoHibernate.Notifier.exe"
+Write-Host "  AzureAutoHibernate.Updater.exe"
 
 # Test version flag
 Write-Host ""

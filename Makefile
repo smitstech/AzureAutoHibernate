@@ -20,7 +20,7 @@ help: ## Show this help message
 	@echo 'Available targets:'
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-build: ## Build both service and notifier executables
+build: ## Build service, notifier, and updater executables
 	@echo "Building AzureAutoHibernate..."
 	@echo "  Version: $(VERSION)"
 	@echo "  Commit:  $(COMMIT)"
@@ -28,6 +28,7 @@ build: ## Build both service and notifier executables
 	@echo ""
 	GOOS=$(GOOS) GOARCH=$(GOARCH) go build -ldflags="$(LDFLAGS)" -o AzureAutoHibernate.exe ./cmd/autohibernate
 	GOOS=$(GOOS) GOARCH=$(GOARCH) go build -ldflags="-H=windowsgui $(LDFLAGS)" -o AzureAutoHibernate.Notifier.exe ./cmd/notifier
+	GOOS=$(GOOS) GOARCH=$(GOARCH) go build -ldflags="$(LDFLAGS)" -o AzureAutoHibernate.Updater.exe ./cmd/updater
 	@echo ""
 	@echo "Build complete!"
 
@@ -40,13 +41,14 @@ test: ## Run tests
 	go test ./... -v
 
 clean: ## Remove build artifacts
-	rm -f AzureAutoHibernate.exe AzureAutoHibernate.Notifier.exe
+	rm -f AzureAutoHibernate.exe AzureAutoHibernate.Notifier.exe AzureAutoHibernate.Updater.exe
 	rm -rf dist/
 
 dist: build ## Create distribution package
 	mkdir -p dist
 	cp AzureAutoHibernate.exe dist/
 	cp AzureAutoHibernate.Notifier.exe dist/
+	cp AzureAutoHibernate.Updater.exe dist/
 	cp config.json dist/
 	cd dist && zip -r ../AzureAutoHibernate-$(VERSION)-windows-amd64.zip .
 	@echo "Package created: AzureAutoHibernate-$(VERSION)-windows-amd64.zip"
