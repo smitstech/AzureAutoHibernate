@@ -4,6 +4,7 @@ package service
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/smitstech/AzureAutoHibernate/internal/appinfo"
@@ -32,6 +33,7 @@ type AutoHibernateService struct {
 	notifierManager      *NotifierManager
 	logger               logger.Logger
 	stopChan             chan struct{}
+	stopOnce             sync.Once  // Ensures stopChan is only closed once
 	lastNotificationTime time.Time
 	resumeAt             *time.Time // Tracks when system resumed from hibernate/sleep
 	updatePending        bool       // Flag to indicate an update is ready to apply
@@ -111,8 +113,10 @@ loop:
 	}
 
 	changes <- svc.Status{State: svc.StopPending}
-	close(s.stopChan)
-	time.Sleep(1 * time.Second) // Give monitor loop time to exit
+	s.stopOnce.Do(func() {
+		close(s.stopChan)
+	})
+	time.Sleep(2 * time.Second) // Give monitor loop and update loop time to exit
 
 	// Stop the notifier manager (if running)
 	if s.notifierManager != nil {
@@ -409,6 +413,11 @@ func (s *AutoHibernateService) checkAndApplyUpdate() {
 	// Mark that an update is pending - service will be stopped
 	s.updatePending = true
 	s.logger.Info(logger.EventServiceStop, "Update triggered, service will restart after update is applied")
+
+	// Stop the service to allow the updater to replace files
+	s.stopOnce.Do(func() {
+		close(s.stopChan)
+	})
 }
 
 // Run executes the service
