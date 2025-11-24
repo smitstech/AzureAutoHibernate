@@ -13,6 +13,7 @@ import (
 	"github.com/smitstech/AzureAutoHibernate/internal/logger"
 	"github.com/smitstech/AzureAutoHibernate/internal/monitor"
 	"github.com/smitstech/AzureAutoHibernate/internal/updater"
+	"github.com/smitstech/AzureAutoHibernate/internal/version"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/debug"
 )
@@ -94,6 +95,7 @@ func (s *AutoHibernateService) Execute(args []string, r <-chan svc.ChangeRequest
 
 	changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
 	s.logger.Info(logger.EventServiceStart, "Service started and running")
+	s.logger.Infof(logger.EventServiceStart, "Running version: %s", version.Version)
 
 loop:
 	for c := range r {

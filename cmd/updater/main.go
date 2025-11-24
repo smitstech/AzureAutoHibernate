@@ -3,6 +3,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -140,6 +141,12 @@ func applyUpdate(exePath, updateDir string) error {
 			continue
 		}
 
+		// Skip config.json - we'll handle it separately with merge
+		if entry.Name() == "config.json" {
+			log.Println("Skipping config.json (will be merged separately)")
+			continue
+		}
+
 		srcPath := filepath.Join(updateDir, entry.Name())
 		dstPath := filepath.Join(exeDir, entry.Name())
 
@@ -159,6 +166,12 @@ func applyUpdate(exePath, updateDir string) error {
 		}
 
 		log.Printf("Updated: %s", entry.Name())
+	}
+
+	// Now merge config.json (preserving user settings)
+	log.Println("Merging config.json...")
+	if err := mergeConfigFile(exeDir, updateDir); err != nil {
+		return fmt.Errorf("failed to merge config: %w", err)
 	}
 
 	return nil
@@ -205,6 +218,92 @@ func stopService(serviceName string) error {
 	}
 
 	log.Printf("Stop command sent, service state: %d", status.State)
+	return nil
+}
+
+// mergeConfigFile merges the new config with the existing one, preserving user settings
+func mergeConfigFile(exeDir, updateDir string) error {
+	configName := "config.json"
+	existingPath := filepath.Join(exeDir, configName)
+	newPath := filepath.Join(updateDir, configName)
+
+	// Check if new config exists in update
+	if _, err := os.Stat(newPath); os.IsNotExist(err) {
+		log.Println("No config.json in update, skipping config merge")
+		return nil
+	}
+
+	// Load new config
+	newData, err := os.ReadFile(newPath)
+	if err != nil {
+		return fmt.Errorf("failed to read new config: %w", err)
+	}
+
+	var newConfig map[string]interface{}
+	if err := json.Unmarshal(newData, &newConfig); err != nil {
+		return fmt.Errorf("failed to parse new config: %w", err)
+	}
+
+	// Check if existing config exists
+	var existingConfig map[string]interface{}
+	if existingData, err := os.ReadFile(existingPath); err == nil {
+		// Existing config found, merge it
+		if err := json.Unmarshal(existingData, &existingConfig); err != nil {
+			log.Printf("Warning: failed to parse existing config: %v - using new config", err)
+			existingConfig = nil
+		}
+	} else if os.IsNotExist(err) {
+		log.Println("No existing config.json found, using new config")
+		existingConfig = nil
+	} else {
+		return fmt.Errorf("failed to read existing config: %w", err)
+	}
+
+	// Merge configs: keep existing values, add new keys
+	var mergedConfig map[string]interface{}
+	var addedKeys []string
+
+	if existingConfig == nil {
+		// No existing config, use new one entirely
+		mergedConfig = newConfig
+		log.Println("Using new config.json (no existing config found)")
+	} else {
+		// Merge: start with existing, add new keys
+		mergedConfig = existingConfig
+		for key, newValue := range newConfig {
+			if _, exists := existingConfig[key]; !exists {
+				mergedConfig[key] = newValue
+				addedKeys = append(addedKeys, key)
+			}
+		}
+
+		if len(addedKeys) > 0 {
+			log.Printf("Added new config fields: %v", addedKeys)
+		} else {
+			log.Println("No new config fields to add")
+		}
+	}
+
+	// Write merged config back
+	mergedData, err := json.MarshalIndent(mergedConfig, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal merged config: %w", err)
+	}
+
+	// Backup existing config
+	if existingConfig != nil {
+		backupPath := existingPath + ".old"
+		os.Remove(backupPath)
+		if err := os.Rename(existingPath, backupPath); err != nil {
+			log.Printf("Warning: failed to backup config: %v", err)
+		}
+	}
+
+	if err := os.WriteFile(existingPath, mergedData, 0644); err != nil {
+		return fmt.Errorf("failed to write merged config: %w", err)
+	}
+
+	log.Println("Config merge completed successfully")
 	return nil
 }
 
