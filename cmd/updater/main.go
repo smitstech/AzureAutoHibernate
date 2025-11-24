@@ -35,11 +35,33 @@ func main() {
 		log.Fatal("Missing required arguments")
 	}
 
-	// Wait for the service to stop (with timeout)
-	if err := waitForServiceStop(*serviceName, 60*time.Second); err != nil {
-		log.Printf("Warning: %v", err)
-		// Continue anyway - the service might have crashed or stopped differently
+	// Attempt to stop the service (retry in case of transient errors)
+	maxStopAttempts := 3
+	var stopErr error
+	for attempt := 1; attempt <= maxStopAttempts; attempt++ {
+		log.Printf("Sending stop command to service (attempt %d/%d)", attempt, maxStopAttempts)
+		stopErr = stopService(*serviceName)
+		if stopErr == nil {
+			break
+		}
+		log.Printf("Failed to send stop command: %v", stopErr)
+		if attempt < maxStopAttempts {
+			time.Sleep(5 * time.Second)
+		}
 	}
+
+	if stopErr != nil {
+		log.Fatalf("Failed to stop service after %d attempts: %v - cannot proceed with update", maxStopAttempts, stopErr)
+	}
+
+	// Wait for the service to fully stop (with generous timeout and progress logging)
+	waitTimeout := 10 * time.Minute
+	log.Printf("Waiting for service to stop (timeout: %v)...", waitTimeout)
+	if err := waitForServiceStop(*serviceName, waitTimeout); err != nil {
+		log.Fatalf("Service failed to stop: %v - cannot proceed with update", err)
+	}
+
+	log.Println("Service stopped successfully")
 
 	// Additional wait to ensure files are released
 	time.Sleep(2 * time.Second)
@@ -79,6 +101,7 @@ func waitForServiceStop(serviceName string, timeout time.Duration) error {
 	defer s.Close()
 
 	deadline := time.Now().Add(timeout)
+	checkCount := 0
 	for time.Now().Before(deadline) {
 		status, err := s.Query()
 		if err != nil {
@@ -90,7 +113,12 @@ func waitForServiceStop(serviceName string, timeout time.Duration) error {
 			return nil
 		}
 
-		log.Printf("Waiting for service to stop (current state: %d)", status.State)
+		checkCount++
+		// Log every 10 seconds to show progress
+		if checkCount%10 == 0 {
+			elapsed := time.Since(time.Now().Add(-timeout).Add(time.Until(deadline)))
+			log.Printf("Still waiting for service to stop (state: %d, elapsed: %v)", status.State, elapsed.Round(time.Second))
+		}
 		time.Sleep(1 * time.Second)
 	}
 
@@ -155,6 +183,29 @@ func copyFile(src, dst string) error {
 	}
 
 	return dstFile.Sync()
+}
+
+// stopService sends a stop command to the Windows service
+func stopService(serviceName string) error {
+	m, err := mgr.Connect()
+	if err != nil {
+		return fmt.Errorf("failed to connect to service manager: %w", err)
+	}
+	defer m.Disconnect()
+
+	s, err := m.OpenService(serviceName)
+	if err != nil {
+		return fmt.Errorf("failed to open service: %w", err)
+	}
+	defer s.Close()
+
+	status, err := s.Control(svc.Stop)
+	if err != nil {
+		return fmt.Errorf("failed to send stop command: %w", err)
+	}
+
+	log.Printf("Stop command sent, service state: %d", status.State)
+	return nil
 }
 
 // startService starts the Windows service

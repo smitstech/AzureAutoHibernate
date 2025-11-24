@@ -5,6 +5,6 @@
   "inactiveUserWarningMinutes": 5,
   "minimumUptimeMinutes": 5,
   "logLevel": "info",
-  "autoUpdate": false,
+  "autoUpdate": true,
   "updateCheckIntervalHr": 24
 }

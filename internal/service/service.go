@@ -403,21 +403,16 @@ func (s *AutoHibernateService) checkAndApplyUpdate() {
 
 	s.logger.Infof(logger.EventServiceStart, "Update downloaded to %s", tempDir)
 
-	// Trigger the update (spawns helper and service will stop)
+	// Trigger the update (spawns helper which will stop the service)
 	s.logger.Info(logger.EventServiceStart, "Triggering update process...")
 	if err := updater.TriggerUpdate(tempDir); err != nil {
 		s.logger.Errorf(logger.EventConfigError, "Failed to trigger update: %v", err)
 		return
 	}
 
-	// Mark that an update is pending - service will be stopped
+	// Mark that an update is pending - the updater will stop this service externally
 	s.updatePending = true
-	s.logger.Info(logger.EventServiceStop, "Update triggered, service will restart after update is applied")
-
-	// Stop the service to allow the updater to replace files
-	s.stopOnce.Do(func() {
-		close(s.stopChan)
-	})
+	s.logger.Info(logger.EventServiceStop, "Update triggered, updater will stop and restart the service")
 }
 
 // Run executes the service
