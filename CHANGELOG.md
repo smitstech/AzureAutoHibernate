@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+- (nothing yet)
+
+---
+
+## [1.1.0] – 2025-11-24
+
 ### Added
 
 - **Self-update capability** with automatic GitHub release checking
