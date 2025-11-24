@@ -4,6 +4,7 @@ package service
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/smitstech/AzureAutoHibernate/internal/appinfo"
@@ -11,6 +12,8 @@ import (
 	"github.com/smitstech/AzureAutoHibernate/internal/config"
 	"github.com/smitstech/AzureAutoHibernate/internal/logger"
 	"github.com/smitstech/AzureAutoHibernate/internal/monitor"
+	"github.com/smitstech/AzureAutoHibernate/internal/updater"
+	"github.com/smitstech/AzureAutoHibernate/internal/version"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/debug"
 )
@@ -31,8 +34,10 @@ type AutoHibernateService struct {
 	notifierManager      *NotifierManager
 	logger               logger.Logger
 	stopChan             chan struct{}
+	stopOnce             sync.Once  // Ensures stopChan is only closed once
 	lastNotificationTime time.Time
 	resumeAt             *time.Time // Tracks when system resumed from hibernate/sleep
+	updatePending        bool       // Flag to indicate an update is ready to apply
 }
 
 func NewAutoHibernateService(cfg *config.Config, vmMetadata *azure.VMMetadata, log logger.Logger) *AutoHibernateService {
@@ -83,8 +88,14 @@ func (s *AutoHibernateService) Execute(args []string, r <-chan svc.ChangeRequest
 	// Start the monitoring loop
 	go s.monitorLoop()
 
+	// Start the update check loop if auto-update is enabled
+	if s.config.AutoUpdate {
+		go s.updateLoop()
+	}
+
 	changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
 	s.logger.Info(logger.EventServiceStart, "Service started and running")
+	s.logger.Infof(logger.EventServiceStart, "Running version: %s", version.Version)
 
 loop:
 	for c := range r {
@@ -104,8 +115,10 @@ loop:
 	}
 
 	changes <- svc.Status{State: svc.StopPending}
-	close(s.stopChan)
-	time.Sleep(1 * time.Second) // Give monitor loop time to exit
+	s.stopOnce.Do(func() {
+		close(s.stopChan)
+	})
+	time.Sleep(2 * time.Second) // Give monitor loop and update loop time to exit
 
 	// Stop the notifier manager (if running)
 	if s.notifierManager != nil {
@@ -329,6 +342,79 @@ func (s *AutoHibernateService) checkAndHibernate() (shouldWarn bool, isHibernati
 		s.logger.Debug(logger.EventIdleCheckInfo, "System is active, no hibernation needed")
 		return false, false
 	}
+}
+
+// updateLoop periodically checks for updates when auto-update is enabled
+func (s *AutoHibernateService) updateLoop() {
+	checkInterval := time.Duration(s.config.UpdateCheckIntervalHr) * time.Hour
+	s.logger.Infof(logger.EventServiceStart, "Auto-update enabled, checking for updates every %v", checkInterval)
+
+	// Initial check after a short delay to allow service to fully start
+	initialDelay := 1 * time.Minute
+	select {
+	case <-time.After(initialDelay):
+	case <-s.stopChan:
+		return
+	}
+
+	// Perform initial check
+	s.checkAndApplyUpdate()
+
+	// Then check periodically
+	ticker := time.NewTicker(checkInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			s.checkAndApplyUpdate()
+		case <-s.stopChan:
+			s.logger.Info(logger.EventServiceStop, "Update loop stopping")
+			return
+		}
+	}
+}
+
+// checkAndApplyUpdate checks for updates and applies them if available
+func (s *AutoHibernateService) checkAndApplyUpdate() {
+	s.logger.Debug(logger.EventServiceStart, "Checking for updates...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	info, err := updater.CheckForUpdate(ctx)
+	if err != nil {
+		s.logger.Warningf(logger.EventConfigError, "Failed to check for updates: %v", err)
+		return
+	}
+
+	if !info.UpdateAvailable {
+		s.logger.Debug(logger.EventServiceStart, "No updates available")
+		return
+	}
+
+	s.logger.Infof(logger.EventServiceStart, "Update available: %s -> %s", info.CurrentVersion, info.LatestVersion)
+
+	// Download the update
+	s.logger.Info(logger.EventServiceStart, "Downloading update...")
+	tempDir, err := updater.DownloadUpdate(ctx)
+	if err != nil {
+		s.logger.Errorf(logger.EventConfigError, "Failed to download update: %v", err)
+		return
+	}
+
+	s.logger.Infof(logger.EventServiceStart, "Update downloaded to %s", tempDir)
+
+	// Trigger the update (spawns helper which will stop the service)
+	s.logger.Info(logger.EventServiceStart, "Triggering update process...")
+	if err := updater.TriggerUpdate(tempDir); err != nil {
+		s.logger.Errorf(logger.EventConfigError, "Failed to trigger update: %v", err)
+		return
+	}
+
+	// Mark that an update is pending - the updater will stop this service externally
+	s.updatePending = true
+	s.logger.Info(logger.EventServiceStop, "Update triggered, updater will stop and restart the service")
 }
 
 // Run executes the service

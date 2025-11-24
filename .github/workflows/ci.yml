@@ -26,7 +26,7 @@ jobs:
       - name: Run go vet
         run: go vet ./...
 
-      - name: Build service and notifier
+      - name: Build executables
         run: |
           $VERSION = (git describe --tags --always 2>$null) -replace '^$', 'dev'
           $COMMIT = "${{ github.sha }}"
@@ -34,12 +34,14 @@ jobs:
           $LDFLAGS = "-X github.com/smitstech/AzureAutoHibernate/internal/version.Version=$VERSION -X github.com/smitstech/AzureAutoHibernate/internal/version.GitCommit=$COMMIT -X github.com/smitstech/AzureAutoHibernate/internal/version.BuildDate=$BUILD_DATE"
           go build -ldflags="$LDFLAGS" -o AzureAutoHibernate.exe ./cmd/autohibernate
           go build -ldflags="-H=windowsgui $LDFLAGS" -o AzureAutoHibernate.Notifier.exe ./cmd/notifier
+          go build -ldflags="$LDFLAGS" -o AzureAutoHibernate.Updater.exe ./cmd/updater
 
       - name: Prepare dist folder
         run: |
           New-Item -ItemType Directory -Force -Path dist
           Copy-Item AzureAutoHibernate.exe dist/
           Copy-Item AzureAutoHibernate.Notifier.exe dist/
+          Copy-Item AzureAutoHibernate.Updater.exe dist/
           Copy-Item config.json dist/
 
       - name: Upload build artifact

@@ -14,6 +14,10 @@ type Config struct {
 	InactiveUserWarningMinutes int    `json:"inactiveUserWarningMinutes"`
 	MinimumUptimeMinutes       int    `json:"minimumUptimeMinutes"`
 	LogLevel                   string `json:"logLevel"`
+
+	// Auto-update settings
+	AutoUpdate            bool `json:"autoUpdate"`            // Enable automatic updates (default: false)
+	UpdateCheckIntervalHr int  `json:"updateCheckIntervalHr"` // Hours between update checks (default: 24)
 }
 
 // Load reads configuration from the specified path
@@ -81,6 +85,11 @@ func (c *Config) Validate() error {
 	}
 	if !validLogLevels[c.LogLevel] {
 		return fmt.Errorf("logLevel must be one of: debug, info, warn, warning, error (got: %s)", c.LogLevel)
+	}
+
+	// Default update check interval to 24 hours if not specified or invalid
+	if c.UpdateCheckIntervalHr <= 0 {
+		c.UpdateCheckIntervalHr = 24
 	}
 
 	return nil

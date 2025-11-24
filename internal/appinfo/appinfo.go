@@ -16,6 +16,13 @@ const (
 	// NotifierExeName is the name of the notifier executable
 	NotifierExeName = "AzureAutoHibernate.Notifier.exe"
 
+	// UpdaterExeName is the name of the updater helper executable
+	UpdaterExeName = "AzureAutoHibernate.Updater.exe"
+
 	// IconFileName is the name of the application icon file
 	IconFileName = "AzureAutoHibernate.png"
+
+	// GitHub repository for updates
+	RepoOwner = "smitstech"
+	RepoName  = "AzureAutoHibernate"
 )
