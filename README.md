@@ -239,7 +239,15 @@ Set `autoUpdate: true` in `config.json` to enable automatic updates. The service
 1. Check for updates at the configured interval (default: every 24 hours)
 2. Download new versions from GitHub releases
 3. Spawn the updater helper process
-4. Stop the service, replace files, and restart automatically
+4. Updater stops the service reliably (with retries and 10-minute timeout)
+5. Replace executable files (config.json is merged, not replaced)
+6. Restart the service automatically
+
+**Safe & Reliable:**
+- **User settings preserved**: Your `config.json` preferences are kept, new fields added automatically
+- **Fails safely**: Update won't proceed if service won't stop (prevents broken updates)
+- **Progress logging**: Updates logged to `%TEMP%\AzureAutoHibernate.Updater.log`
+- **Version verification**: Check Windows Event Log after restart to confirm version
 
 **Note:** The updater process runs with the same permissions as the service (SYSTEM).
 

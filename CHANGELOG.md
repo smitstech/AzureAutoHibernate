@@ -13,12 +13,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - **Self-update capability** with automatic GitHub release checking
   - New `internal/updater` package handles update detection and download
-  - New `AzureAutoHibernate.Updater.exe` helper applies updates after service stops
+  - New `AzureAutoHibernate.Updater.exe` helper applies updates reliably:
+    - Actively stops service via Windows Service Control Manager
+    - Retry logic: up to 3 attempts to send stop command (handles transient errors)
+    - Extended timeout: 10 minutes for service to stop gracefully
+    - Fails safely if service won't stop (prevents broken updates)
+    - Logs progress every 10 seconds during wait
+  - Smart config merge preserves user settings during updates:
+    - User preferences in `config.json` are preserved
+    - New config fields from releases are added automatically
+    - Creates backup of existing config (`.old` file) before merge
+    - Logs which new fields were added for transparency
   - Configurable update check interval via `updateCheckIntervalHr` (default: 24 hours)
   - Optional auto-update via `autoUpdate` config option (default: disabled)
   - Manual update check via `-check-update` command line flag
   - Uses `creativeprojects/go-selfupdate` library for GitHub release detection
   - GitHub repository configured in `internal/appinfo` (for forks to customize)
+- **Version logging** on service startup
+  - Current version logged to Windows Event Log on startup for easy verification
 
 ### Changed
 
