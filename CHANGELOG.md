@@ -13,6 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.1] – 2025-12-13
+
+### Changed
+
+- Updated github actions/checkout from 5 to 6
+- Bump golang.org/x/sys from 0.38.0 to 0.39.0
+
+---
+
 ## [1.1.0] – 2025-11-24
 
 ### Added
