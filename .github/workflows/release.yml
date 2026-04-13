@@ -70,7 +70,7 @@ jobs:
           }
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: AzureAutoHibernate-${{ github.ref_name }}-windows-amd64.zip
           body_path: release-notes.md
