@@ -25,6 +25,10 @@ const (
 	warningCheckInterval = 5 * time.Second
 	// minCheckInterval is the minimum interval for idle state checks
 	minCheckInterval = 5 * time.Second
+	// maxCheckInterval caps all poll intervals so mid-sleep session-state
+	// changes (RDP disconnect, logoff) are noticed within a minute instead
+	// of after a full threshold-length sleep
+	maxCheckInterval = 60 * time.Second
 )
 
 type AutoHibernateService struct {
@@ -34,7 +38,7 @@ type AutoHibernateService struct {
 	notifierManager      *NotifierManager
 	logger               logger.Logger
 	stopChan             chan struct{}
-	stopOnce             sync.Once  // Ensures stopChan is only closed once
+	stopOnce             sync.Once // Ensures stopChan is only closed once
 	lastNotificationTime time.Time
 	resumeAt             *time.Time // Tracks when system resumed from hibernate/sleep
 	updatePending        bool       // Flag to indicate an update is ready to apply
@@ -63,6 +67,10 @@ func NewAutoHibernateService(cfg *config.Config, vmMetadata *azure.VMMetadata, l
 			vmMetadata.SubscriptionId,
 			vmMetadata.ResourceGroup,
 			vmMetadata.VMName,
+		).WithServicePrincipal(
+			cfg.TenantID,
+			cfg.ClientID,
+			cfg.ClientSecret,
 		),
 		notifierManager: notifierManager,
 		logger:          log,
@@ -174,6 +182,11 @@ func (s *AutoHibernateService) calculateNextCheckTime(inWarningMode bool) time.D
 		defaultCheckInterval = time.Duration(minThreshold) * time.Minute
 	}
 
+	// Cap the default interval so mid-sleep state changes are seen quickly
+	if defaultCheckInterval > maxCheckInterval {
+		defaultCheckInterval = maxCheckInterval
+	}
+
 	// Get time until next threshold could be exceeded
 	timeUntil, err := s.idleMonitor.GetTimeUntilThresholds()
 	if err != nil {
@@ -189,6 +202,14 @@ func (s *AutoHibernateService) calculateNextCheckTime(inWarningMode bool) time.D
 	// Ensure we never check less frequently than the minimum
 	if timeUntil < minCheckInterval {
 		return minCheckInterval
+	}
+
+	// Cap the dynamic interval. Without this, an active user makes the
+	// loop sleep for up to inactiveUserThreshold (e.g. 30m), during which an
+	// RDP disconnect or logoff is completely invisible; short disconnects are
+	// then missed entirely and longer ones hibernate only after ~2x threshold.
+	if timeUntil > maxCheckInterval {
+		return maxCheckInterval
 	}
 
 	return timeUntil
