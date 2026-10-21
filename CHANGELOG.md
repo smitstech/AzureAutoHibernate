@@ -9,7 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-- (nothing yet)
+### Added
+
+- Optional **Service Principal authentication** for environments where IMDS
+  (`169.254.169.254`) is unreachable (e.g. VPN or exit node intercepting
+  link-local traffic). Setting `tenantId`, `clientId` and `clientSecret` in
+  `config.json` switches token acquisition to `login.microsoftonline.com`;
+  the optional `subscriptionId`, `resourceGroup` and `vmName` keys let the
+  service identify its VM when IMDS is unavailable. Credentials must be set
+  together or not at all — partial configuration fails validation
+
+### Changed
+
+- Monitor loop poll interval is now capped at 60 seconds (previously up to the
+  full idle threshold, e.g. 30 minutes), so session changes during a sleep —
+  such as an RDP disconnect or logoff — are detected within a minute instead
+  of being missed until the next threshold-length sleep
 
 ---
 

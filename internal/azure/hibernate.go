@@ -13,6 +13,12 @@ type AzureClient struct {
 	subscriptionId string
 	resourceGroup  string
 	vmName         string
+
+	// Optional Service Principal credentials; when set, tokens come from the
+	// public login endpoint instead of IMDS.
+	spTenantID     string
+	spClientID     string
+	spClientSecret string
 }
 
 // vmResponse represents the Azure VM API response structure
@@ -36,12 +42,30 @@ func NewAzureClient(subscriptionId, resourceGroup, vmName string) *AzureClient {
 	}
 }
 
+// WithServicePrincipal switches authentication from managed identity (IMDS)
+// to a Service Principal (client credentials against login.microsoftonline.com).
+func (c *AzureClient) WithServicePrincipal(tenantID, clientID, clientSecret string) *AzureClient {
+	c.spTenantID = tenantID
+	c.spClientID = clientID
+	c.spClientSecret = clientSecret
+	return c
+}
+
+// getToken returns an access token via Service Principal if configured,
+// otherwise via the VM's managed identity (IMDS).
+func (c *AzureClient) getToken(ctx context.Context) (string, error) {
+	if c.spClientSecret != "" {
+		return GetServicePrincipalToken(ctx, c.spTenantID, c.spClientID, c.spClientSecret)
+	}
+	return GetManagedIdentityToken(ctx)
+}
+
 // HibernateVM sends a hibernation request to Azure for the VM
 func (c *AzureClient) HibernateVM(ctx context.Context) error {
-	// Get the access token
-	token, err := GetManagedIdentityToken(ctx)
+	// Get the access token (Service Principal if configured, else managed identity)
+	token, err := c.getToken(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to get managed identity token: %w", err)
+		return fmt.Errorf("failed to get access token: %w", err)
 	}
 
 	// Build the hibernation API URL
@@ -87,10 +111,10 @@ func (c *AzureClient) HibernateVM(ctx context.Context) error {
 
 // CheckHibernationEnabled checks if hibernation is enabled on the VM via Azure API
 func (c *AzureClient) CheckHibernationEnabled(ctx context.Context) (bool, error) {
-	// Get the access token
-	token, err := GetManagedIdentityToken(ctx)
+	// Get the access token (Service Principal if configured, else managed identity)
+	token, err := c.getToken(ctx)
 	if err != nil {
-		return false, fmt.Errorf("failed to get managed identity token: %w", err)
+		return false, fmt.Errorf("failed to get access token: %w", err)
 	}
 
 	// Build the VM properties API URL

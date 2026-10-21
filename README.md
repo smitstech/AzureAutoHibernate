@@ -111,6 +111,11 @@ Open **Event Viewer → Applications and Services Logs → AzureAutoHibernate**
 - Managed Identity must have the hibernate action permission
 - Go 1.21+ (only required if building from source)
 
+> If IMDS is unreachable on your VM (e.g. a VPN or exit node intercepts
+> link-local traffic), see
+> [Service Principal Authentication](#service-principal-authentication-optional)
+> for an alternative to managed identity.
+
 ---
 
 # Configuration
@@ -148,6 +153,64 @@ Example `config.json`:
 - At least one idle condition must be > 0
 - Warning period applies _only_ to inactive-user condition
 - Auto-update downloads from GitHub releases and restarts the service automatically
+
+### Service Principal Authentication (Optional)
+
+By default the service authenticates with the VM's **system managed identity**
+via the Azure Instance Metadata Service (IMDS at `169.254.169.254`). If IMDS is
+unreachable — for example when a VPN or exit node intercepts link-local
+traffic — you can instead authenticate with a **Service Principal** against the
+public login endpoint (`login.microsoftonline.com`):
+
+```json
+{
+  "tenantId": "00000000-0000-0000-0000-000000000000",
+  "clientId": "00000000-0000-0000-0000-000000000000",
+  "clientSecret": "your-client-secret",
+  "subscriptionId": "00000000-0000-0000-0000-000000000000",
+  "resourceGroup": "my-resource-group",
+  "vmName": "my-vm"
+}
+```
+
+| Parameter        | Description                                                                 | Required            |
+| ---------------- | --------------------------------------------------------------------------- | ------------------- |
+| `tenantId`       | Azure AD tenant of the Service Principal                                    | All three or none   |
+| `clientId`       | Application (client) ID of the Service Principal                            | All three or none   |
+| `clientSecret`   | Client secret of the Service Principal                                      | All three or none   |
+| `subscriptionId` | VM subscription — used only when IMDS is unavailable                        | With SP auth        |
+| `resourceGroup`  | VM resource group — used only when IMDS is unavailable                      | With SP auth        |
+| `vmName`         | VM name — used only when IMDS is unavailable                                | With SP auth        |
+
+**Notes:**
+
+- `tenantId`, `clientId` and `clientSecret` must be set **together or not at
+  all** — the configuration fails validation if only some are present
+- `subscriptionId`, `resourceGroup` and `vmName` are ignored while IMDS is
+  reachable; set them so the service can identify its VM when IMDS is not
+- The secret is stored in **plain text** in `config.json`. Restrict access to
+  the file, use a secret dedicated to this service, and rotate it if exposed
+
+**Grant the Service Principal least privilege** — it only needs to read the VM
+state and deallocate (hibernate) it. Create a custom role and scope the
+assignment to this VM only:
+
+```bash
+az role definition create --role-definition '{
+  "Name": "AzureAutoHibernate Operator",
+  "Description": "Read VM state and hibernate (deallocate) a VM",
+  "Actions": [
+    "Microsoft.Compute/virtualMachines/read",
+    "Microsoft.Compute/virtualMachines/deallocate/action"
+  ],
+  "AssignableScopes": ["/subscriptions/<subscription-id>"]
+}'
+
+az role assignment create \
+  --assignee <clientId> \
+  --role "AzureAutoHibernate Operator" \
+  --scope "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.Compute/virtualMachines/<vm-name>"
+```
 
 ---
 

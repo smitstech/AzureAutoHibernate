@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 const (
@@ -16,6 +17,7 @@ const (
 
 	// Azure API endpoints
 	azureManagementEndpoint = "https://management.azure.com"
+	azureLoginEndpoint      = "https://login.microsoftonline.com"
 
 	// IMDS API versions
 	imdsTokenApiVersion    = "2018-02-01"
@@ -96,6 +98,54 @@ func GetManagedIdentityToken(ctx context.Context) (string, error) {
 	}
 
 	return tokenResp.AccessToken, nil
+}
+
+// spTokenResponse is the OAuth2 client-credentials token reply (v2 endpoint).
+// Note: expires_in is a JSON number here (a string in the IMDS v1 reply).
+type spTokenResponse struct {
+	AccessToken string `json:"access_token"`
+	TokenType   string `json:"token_type"`
+	ExpiresIn   int    `json:"expires_in"`
+}
+
+// GetServicePrincipalToken retrieves an access token using OAuth2 client
+// credentials against the public login endpoint — no IMDS required, so it
+// works even when link-local/Azure-fabric traffic is intercepted (VPN,
+// exit node, filter drivers).
+func GetServicePrincipalToken(ctx context.Context, tenantID, clientID, clientSecret string) (string, error) {
+	tokenURL := fmt.Sprintf("%s/%s/oauth2/v2.0/token", azureLoginEndpoint, tenantID)
+
+	data := url.Values{}
+	data.Set("grant_type", "client_credentials")
+	data.Set("client_id", clientID)
+	data.Set("client_secret", clientSecret)
+	data.Set("scope", azureManagementEndpoint+"/.default")
+
+	req, err := http.NewRequestWithContext(ctx, "POST", tokenURL, strings.NewReader(data.Encode()))
+	if err != nil {
+		return "", fmt.Errorf("failed to create token request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := (&http.Client{}).Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to get token from login endpoint: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("login endpoint returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var tr spTokenResponse
+	if err := json.Unmarshal(body, &tr); err != nil {
+		return "", fmt.Errorf("failed to parse token response: %w", err)
+	}
+	if tr.AccessToken == "" {
+		return "", fmt.Errorf("access_token is empty in login response")
+	}
+	return tr.AccessToken, nil
 }
 
 // VMMetadata contains the VM information retrieved from IMDS

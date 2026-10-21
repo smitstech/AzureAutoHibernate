@@ -18,6 +18,30 @@ type Config struct {
 	// Auto-update settings
 	AutoUpdate            bool `json:"autoUpdate"`            // Enable automatic updates (default: false)
 	UpdateCheckIntervalHr int  `json:"updateCheckIntervalHr"` // Hours between update checks (default: 24)
+
+	// Service Principal auth (optional). If all three are set, auth uses
+	// login.microsoftonline.com (public internet) instead of the VM's managed
+	// identity via IMDS — useful when IMDS (169.254.169.254) is unreachable,
+	// e.g. when a VPN/exit-node intercepts link-local traffic.
+	TenantID     string `json:"tenantId"`
+	ClientID     string `json:"clientId"`
+	ClientSecret string `json:"clientSecret"`
+
+	// Optional VM identity override. Required when IMDS is unreachable and
+	// Service Principal auth is used; ignored otherwise.
+	SubscriptionID string `json:"subscriptionId"`
+	ResourceGroup  string `json:"resourceGroup"`
+	VMNameOverride string `json:"vmName"`
+}
+
+// HasVMIdentityOverride reports whether config fully specifies the VM identity
+func (c *Config) HasVMIdentityOverride() bool {
+	return c.SubscriptionID != "" && c.ResourceGroup != "" && c.VMNameOverride != ""
+}
+
+// UseServicePrincipal reports whether Service Principal auth is configured
+func (c *Config) UseServicePrincipal() bool {
+	return c.TenantID != "" && c.ClientID != "" && c.ClientSecret != ""
 }
 
 // Load reads configuration from the specified path
@@ -90,6 +114,17 @@ func (c *Config) Validate() error {
 	// Default update check interval to 24 hours if not specified or invalid
 	if c.UpdateCheckIntervalHr <= 0 {
 		c.UpdateCheckIntervalHr = 24
+	}
+
+	// Service Principal: all three fields must be provided together
+	spSet := 0
+	for _, v := range []string{c.TenantID, c.ClientID, c.ClientSecret} {
+		if v != "" {
+			spSet++
+		}
+	}
+	if spSet != 0 && spSet != 3 {
+		return fmt.Errorf("service principal auth requires tenantId, clientId AND clientSecret (all or none)")
 	}
 
 	return nil

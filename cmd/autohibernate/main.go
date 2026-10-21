@@ -149,8 +149,21 @@ func runServiceOrDebug(opts *options) {
 
 	vmMetadata, err := azure.GetVMMetadata(ctx)
 	if err != nil {
-		appLogger.Errorf(logger.EventConfigError, "Failed to get VM metadata from IMDS: %v", err)
-		log.Fatalf("Failed to get VM metadata from IMDS: %v\nThe service must run on an Azure VM with access to the Instance Metadata Service.", err)
+		// IMDS unreachable — fall back to config-provided VM identity
+		// when Service Principal auth is configured. This lets the service run
+		// on VMs where link-local/Azure-fabric traffic is intercepted
+		// (VPN, exit node, filter drivers).
+		if cfg.UseServicePrincipal() && cfg.HasVMIdentityOverride() {
+			appLogger.Warningf(logger.EventConfigError, "IMDS unreachable (%v); using config-provided VM identity with SP auth", err)
+			vmMetadata = &azure.VMMetadata{
+				SubscriptionId: cfg.SubscriptionID,
+				ResourceGroup:  cfg.ResourceGroup,
+				VMName:         cfg.VMNameOverride,
+			}
+		} else {
+			appLogger.Errorf(logger.EventConfigError, "Failed to get VM metadata from IMDS: %v", err)
+			log.Fatalf("Failed to get VM metadata from IMDS: %v\nThe service must run on an Azure VM with access to the Instance Metadata Service.", err)
+		}
 	}
 
 	appLogger.Infof(logger.EventConfigLoaded, "VM Info: Subscription=%s, ResourceGroup=%s, VMName=%s",

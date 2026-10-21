@@ -201,6 +201,38 @@ func TestValidate(t *testing.T) {
 			},
 			expectError: false,
 		},
+		{
+			name: "service principal fully configured is valid",
+			config: Config{
+				NoUsersIdleMinutes: 30,
+				LogLevel:           "info",
+				TenantID:           "tenant",
+				ClientID:           "client",
+				ClientSecret:       "secret",
+			},
+			expectError: false,
+		},
+		{
+			name: "service principal missing clientSecret",
+			config: Config{
+				NoUsersIdleMinutes: 30,
+				LogLevel:           "info",
+				TenantID:           "tenant",
+				ClientID:           "client",
+			},
+			expectError: true,
+			errorMsg:    "service principal auth requires tenantId, clientId AND clientSecret (all or none)",
+		},
+		{
+			name: "service principal with only tenantId",
+			config: Config{
+				NoUsersIdleMinutes: 30,
+				LogLevel:           "info",
+				TenantID:           "tenant",
+			},
+			expectError: true,
+			errorMsg:    "service principal auth requires tenantId, clientId AND clientSecret (all or none)",
+		},
 	}
 
 	for _, tt := range tests {
@@ -329,6 +361,56 @@ func TestLoad(t *testing.T) {
 			}`,
 			expectError: true,
 		},
+		{
+			name: "config with service principal and VM identity override",
+			content: `{
+				"noUsersIdleMinutes": 30,
+				"logLevel": "info",
+				"tenantId": "tenant-123",
+				"clientId": "client-456",
+				"clientSecret": "secret-789",
+				"subscriptionId": "sub-abc",
+				"resourceGroup": "rg-demo",
+				"vmName": "vm-demo"
+			}`,
+			expectError: false,
+			validate: func(t *testing.T, cfg *Config) {
+				if cfg.TenantID != "tenant-123" {
+					t.Errorf("TenantID = %q, want %q", cfg.TenantID, "tenant-123")
+				}
+				if cfg.ClientID != "client-456" {
+					t.Errorf("ClientID = %q, want %q", cfg.ClientID, "client-456")
+				}
+				if cfg.ClientSecret != "secret-789" {
+					t.Errorf("ClientSecret = %q, want %q", cfg.ClientSecret, "secret-789")
+				}
+				if cfg.SubscriptionID != "sub-abc" {
+					t.Errorf("SubscriptionID = %q, want %q", cfg.SubscriptionID, "sub-abc")
+				}
+				if cfg.ResourceGroup != "rg-demo" {
+					t.Errorf("ResourceGroup = %q, want %q", cfg.ResourceGroup, "rg-demo")
+				}
+				if cfg.VMNameOverride != "vm-demo" {
+					t.Errorf("VMNameOverride = %q, want %q", cfg.VMNameOverride, "vm-demo")
+				}
+				if !cfg.UseServicePrincipal() {
+					t.Error("UseServicePrincipal() = false, want true")
+				}
+				if !cfg.HasVMIdentityOverride() {
+					t.Error("HasVMIdentityOverride() = false, want true")
+				}
+			},
+		},
+		{
+			name: "invalid config - partial service principal credentials",
+			content: `{
+				"noUsersIdleMinutes": 30,
+				"logLevel": "info",
+				"tenantId": "tenant-123",
+				"clientId": "client-456"
+			}`,
+			expectError: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -377,6 +459,96 @@ func TestLoadEmptyPath(t *testing.T) {
 	} else {
 		t.Logf("Expected error when loading from default location: %v", err)
 		// This is expected behavior when config.json doesn't exist
+	}
+}
+
+// TestUseServicePrincipal tests the Service Principal detection helper
+func TestUseServicePrincipal(t *testing.T) {
+	tests := []struct {
+		name string
+		c    Config
+		want bool
+	}{
+		{
+			name: "all three credentials set",
+			c: Config{
+				TenantID:     "tenant",
+				ClientID:     "client",
+				ClientSecret: "secret",
+			},
+			want: true,
+		},
+		{
+			name: "no credentials set",
+			c:    Config{},
+			want: false,
+		},
+		{
+			name: "missing clientSecret",
+			c: Config{
+				TenantID: "tenant",
+				ClientID: "client",
+			},
+			want: false,
+		},
+		{
+			name: "only clientSecret set",
+			c:    Config{ClientSecret: "secret"},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.c.UseServicePrincipal(); got != tt.want {
+				t.Errorf("UseServicePrincipal() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestHasVMIdentityOverride tests the VM identity override detection helper
+func TestHasVMIdentityOverride(t *testing.T) {
+	tests := []struct {
+		name string
+		c    Config
+		want bool
+	}{
+		{
+			name: "all three fields set",
+			c: Config{
+				SubscriptionID: "sub",
+				ResourceGroup:  "rg",
+				VMNameOverride: "vm",
+			},
+			want: true,
+		},
+		{
+			name: "no fields set",
+			c:    Config{},
+			want: false,
+		},
+		{
+			name: "missing vmName",
+			c: Config{
+				SubscriptionID: "sub",
+				ResourceGroup:  "rg",
+			},
+			want: false,
+		},
+		{
+			name: "only vmName set",
+			c:    Config{VMNameOverride: "vm"},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.c.HasVMIdentityOverride(); got != tt.want {
+				t.Errorf("HasVMIdentityOverride() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 

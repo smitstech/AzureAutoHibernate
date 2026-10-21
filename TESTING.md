@@ -6,7 +6,7 @@ The project includes comprehensive unit tests (~2,000 lines) covering critical f
 
 | Test File                 | Lines | Coverage                                                 |
 | ------------------------- | ----- | -------------------------------------------------------- |
-| `config/config_test.go`   | 449   | Configuration validation, file loading, edge cases       |
+| `config/config_test.go`   | 621   | Configuration validation, file loading, SP auth, edge cases |
 | `monitor/idle_test.go`    | 602   | FSM state transitions, time calculations, idle detection |
 | `pipe/messages_test.go`   | 296   | Time formatting, notification messages, rounding logic   |
 | `service/service_test.go` | 644   | Service initialization, dynamic polling, power events    |
@@ -37,6 +37,7 @@ go test -cover ./...
 ### Configuration (`config/config_test.go`)
 
 - Configuration validation (negative values, zero thresholds, invalid log levels)
+- Service Principal auth config (all-or-none validation, helper predicates)
 - JSON file loading and parsing
 - Default value handling (empty log level defaults to "info")
 - Edge cases (all thresholds zero, very large values)
